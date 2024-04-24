@@ -279,12 +279,12 @@ def replace_bib_with_caption(text: str, captions: list[str]):
 
 
 def find_hyphenated_words() -> list[str]:
-    """ Find all hyphenated words in the text, such that later hyphenated words can be
+    """Find all hyphenated words in the text, such that later hyphenated words can be
     distinguished from regular words, broken by a line break.
     Returns:
         A list of all hyphenated words
     """
-    with open(OUTFILE.with_suffix('.tex'), "r", encoding="UTF-8") as fh:
+    with open(OUTFILE.with_suffix(".tex"), "r", encoding="UTF-8") as fh:
         text = fh.read()
     # first, remove all inline math, as we don't mistake minus signs for hyphenated words
     text = re.sub(r"\$.*?\$", "", text)
@@ -318,7 +318,7 @@ def generate_detexed_pdf():
     """
     # generate pdf output
     proc = subprocess.run(
-        ["pdflatex", "-interaction=nonstopmode", OUTFILE.with_suffix('.tex').name],
+        ["pdflatex", "-interaction=nonstopmode", OUTFILE.with_suffix(".tex").name],
         check=True,
         capture_output=True,
         cwd="/tmp",
@@ -326,8 +326,7 @@ def generate_detexed_pdf():
     if proc.returncode != 0:
         print(proc.stderr)
         raise RuntimeError("PDF generation failed.")
-    else:
-        print(f"'{str(OUTFILE.with_suffix('.pdf'))}' generated successfully.")
+    print(f"'{str(OUTFILE.with_suffix('.pdf'))}' generated successfully.")
 
 
 def convert_detexed_pdf_to_txt():
@@ -338,7 +337,7 @@ def convert_detexed_pdf_to_txt():
     """
     hypyenated_words = find_hyphenated_words()
     text = ""
-    with open(OUTFILE.with_suffix('.pdf'), "rb") as file:
+    with open(OUTFILE.with_suffix(".pdf"), "rb") as file:
         reader = PyPDF2.PdfFileReader(file)
         num_pages = reader.numPages
         for page_num in range(num_pages):
@@ -361,6 +360,6 @@ def convert_detexed_pdf_to_txt():
     text = text.replace("??", "1")
 
     # write output to file
-    with open(OUTFILE.with_suffix('.txt'), "w", encoding="UTF-8") as fh:
+    with open(OUTFILE.with_suffix(".txt"), "w", encoding="UTF-8") as fh:
         fh.write(text)
     print(f"'{str(OUTFILE.with_suffix('.txt'))}' generated successfully.")
