@@ -1,6 +1,9 @@
 import re
-import sys
+import subprocess
 from pathlib import Path
+import PyPDF2
+
+OUTFILE = Path("/tmp/temp")
 
 
 def get_single_caption(text: str):
@@ -275,6 +278,23 @@ def replace_bib_with_caption(text: str, captions: list[str]):
     return text
 
 
+def find_hyphenated_words() -> list[str]:
+    """ Find all hyphenated words in the text, such that later hyphenated words can be
+    distinguished from regular words, broken by a line break.
+    Returns:
+        A list of all hyphenated words
+    """
+    with open(OUTFILE.with_suffix('.tex'), "r", encoding="UTF-8") as fh:
+        text = fh.read()
+    # first, remove all inline math, as we don't mistake minus signs for hyphenated words
+    text = re.sub(r"\$.*?\$", "", text)
+    # find all hyphenated words by looking for a hypyen between two letters
+    # We will have some false positives, but that is fine, since we only intend to use this
+    # list to remove superfluous line breaks
+    hyphenated_words = re.findall(r"\b\w+-\w+\b", text)
+    return hyphenated_words
+
+
 def detex(file: str):
     """Format the text in a latex document to be spellchecked by removing latex commands"""
     print(f"Detexing {file}")
@@ -287,6 +307,60 @@ def detex(file: str):
     text = delete_tex_command(text, r"~\\cite")
     text = replace_bib_with_caption(text, captions)
     # store output in /tmp
-    print("Storing intermediate output in /tmp/temp.tex")
-    with open("/tmp/temp.tex", "w", encoding="UTF-8") as fh:
+    print(f"Storing intermediate output in {str(OUTFILE.with_suffix('.tex'))}")
+    with open(f"{str(OUTFILE.with_suffix('.tex'))}", "w", encoding="UTF-8") as fh:
         fh.write(text)
+
+
+def generate_detexed_pdf():
+    """Generate a pdf from a detexed file. This is the easiest way to convert inline latex
+    math commands into the corresponding utf-8 chars.
+    """
+    # generate pdf output
+    proc = subprocess.run(
+        ["pdflatex", "-interaction=nonstopmode", OUTFILE.with_suffix('.tex').name],
+        check=True,
+        capture_output=True,
+        cwd="/tmp",
+    )
+    if proc.returncode != 0:
+        print(proc.stderr)
+        raise RuntimeError("PDF generation failed.")
+    else:
+        print(f"'{str(OUTFILE.with_suffix('.pdf'))}' generated successfully.")
+
+
+def convert_detexed_pdf_to_txt():
+    """Convert a detexed pdf to a txt file such that we can spellcheck it.
+     TODO: For now, we read the
+    Args:
+        file: The pdf file to generate the txt file from, default is /tmp/temp.pdf
+    """
+    hypyenated_words = find_hyphenated_words()
+    text = ""
+    with open(OUTFILE.with_suffix('.pdf'), "rb") as file:
+        reader = PyPDF2.PdfFileReader(file)
+        num_pages = reader.numPages
+        for page_num in range(num_pages):
+            page = reader.getPage(page_num)
+            text += page.extractText()
+
+    # apply some quick fixes to the text
+    # remove double spaces characters that are not line breaks
+    text = re.sub(r"(?<!\n)\s{2,}", " ", text)
+    # find hyphenated words and remove line breaks
+    for word_break in re.findall(r"\b\w+-\s?\w+\b", text):
+        word_break_parsed = word_break.replace("\n", "").replace(" ", "")
+        # now check if we have a hyphenated word or it is a line break
+        if word_break_parsed not in hypyenated_words:
+            word_break_parsed = word_break_parsed.replace("-", "")
+        # apply the change to the text, where the change is either removing a possible
+        # extra space or a line break
+        text = text.replace(word_break, word_break_parsed)
+    # replace ?? with 1, in case we had undefined references
+    text = text.replace("??", "1")
+
+    # write output to file
+    with open(OUTFILE.with_suffix('.txt'), "w", encoding="UTF-8") as fh:
+        fh.write(text)
+    print(f"'{str(OUTFILE.with_suffix('.txt'))}' generated successfully.")
