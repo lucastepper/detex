@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "detex"
+version = "0.1.0"
+description = "Script to convert latex src file to pure text-based .txt file for better spellcheck."
+authors = ["lucas tepper <lucas.tepper.91@gmail.com>"]
+license = "GNUv3"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+PyPDF2 = "^3.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+detex = "detex.main:main"

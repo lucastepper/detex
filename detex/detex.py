@@ -275,24 +275,18 @@ def replace_bib_with_caption(text: str, captions: list[str]):
     return text
 
 
-def main():
+def detex(file: str):
     """Format the text in a latex document to be spellchecked by removing latex commands"""
-    mode = sys.argv[1]
-    if mode == "detex":
-        file = Path(sys.argv[2])
-        print(f"Detexing {file}")
-        with open(file, "r", encoding="UTF-8") as fh:
-            text = fh.read()
-        # run through the text editing functionse
-        text = replace_refs(text)
-        text, captions = get_all_captions(text)
-        text = delete_equations(text)
-        text = delete_tex_command(text, r"~\\cite")
-        text = replace_bib_with_caption(text, captions)
-        # store output in /tmp
-        with open("/tmp/temp.tex", "w", encoding="UTF-8") as fh:
-            fh.write(text)
-
-
-if __name__ == "__main__":
-    main()
+    print(f"Detexing {file}")
+    with open(file, "r", encoding="UTF-8") as fh:
+        text = fh.read()
+    # run through the text editing functionse
+    text = replace_refs(text)
+    text, captions = get_all_captions(text)
+    text = delete_equations(text)
+    text = delete_tex_command(text, r"~\\cite")
+    text = replace_bib_with_caption(text, captions)
+    # store output in /tmp
+    print("Storing intermediate output in /tmp/temp.tex")
+    with open("/tmp/temp.tex", "w", encoding="UTF-8") as fh:
+        fh.write(text)
